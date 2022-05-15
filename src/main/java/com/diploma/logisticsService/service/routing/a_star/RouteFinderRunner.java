@@ -1,12 +1,34 @@
 package com.diploma.logisticsService.service.routing.a_star;
 
 
+import com.diploma.logisticsService.exceptions.InvalidNodeException;
+import com.diploma.logisticsService.exceptions.NoShortPathException;
+import com.diploma.logisticsService.models.csv.Branch;
+import com.diploma.logisticsService.models.csv.Node;
+import com.diploma.logisticsService.models.csv.Order;
+import com.diploma.logisticsService.models.csv.Route;
+import com.diploma.logisticsService.models.dto.EdgeDTO;
+import com.diploma.logisticsService.models.dto.NodeDTO;
+import com.diploma.logisticsService.models.routing.RoutingParams;
+import com.diploma.logisticsService.service.data.dto.BranchService;
+import com.diploma.logisticsService.service.data.dto.EdgeService;
+import com.diploma.logisticsService.service.data.dto.NodeService;
+import com.diploma.logisticsService.service.geocoding.GeocodingService;
+import com.diploma.logisticsService.service.routing.scorers.NewNodeScorer;
+import com.diploma.logisticsService.service.routing.scorers.TargetScorer;
+import com.diploma.logisticsService.service.routing.scorers.impl.DistanceTargetScorer;
+import com.diploma.logisticsService.service.routing.scorers.impl.EdgeDistanceScorer;
+import com.diploma.logisticsService.service.routing.scorers.impl.EdgeDistanceTrafficJamScorer;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import lombok.NoArgsConstructor;
+import io.redlink.geocoding.LatLon;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.openjdk.jmh.annotations.*;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Computes short pathes for list of orders in 2 variations
@@ -18,88 +40,68 @@ import java.util.List;
 @BenchmarkMode(Mode.All)
 @Warmup(iterations = 2)
 @State(Scope.Benchmark)
-@NoArgsConstructor
+@RequiredArgsConstructor
+@Slf4j
 public class RouteFinderRunner {
 
-    private  List<Node> nodes;
-    private  List<Edge> edges;
-    private  List<Branch> branches;
+    private final NodeService nodeService;
+    private final BranchService branchService;
+    private final AStar<NodeDTO> routeFinder;
 
-    private static HashMap<String, Node> branchNodes;
+    private final GeocodingService geocodingService;
 
-    public RouteFinderRunner(List<Node> nodes, List<Edge> edges, List<Branch> branches) {
-        this.nodes = nodes;
-        this.edges = edges;
-        this.branches = branches;
-    }
+    private NewNodeScorer<EdgeDTO> edgeScorer;
+    private TargetScorer<NodeDTO> targetScorer;
 
     /**
      * computes pathes for list of orders with claculating of dijkstra for each order
      * @param orders - order list
-     * @param splitter - splitter (if exists) for which whole order list are divided into order sublists (used for creating file name)
-     * @param algorithmType - type of started algorithm (used for creating file name)
      * @return map of node and list of nodes as the shortest path to it from departure node
      */
-    public HashMap<Node,Route<Node>> computePathes(
+    public HashMap<NodeDTO, Route<NodeDTO>> computePathes(
             List<Order> orders,
-            String splitter,
-            String algorithmType,
-            NewNodeScorer<Edge> nextNodeScorer,
-            TargetScorer<Node> targetScorer) {
+            List<Branch> branches,
+            RoutingParams params) {
 
-        String noShortPathFileName = "results\\json\\" + splitter + "_no_short_path.txt";
-        String nodeNotExistFileName = "results\\json\\" + splitter + "_strange.txt";
+        if(params.isUseTrafficJamPoints()){
+            edgeScorer = new EdgeDistanceTrafficJamScorer<>();
+        }
+        else{
+            edgeScorer = new EdgeDistanceScorer<>();
+        }
+        targetScorer = new DistanceTargetScorer<>();
 
-        String fileNameJson = "results\\json\\"+splitter +"_"+ algorithmType + "AStar.json";
-
-
-        NodeWorker nodeWorker = new NodeWorker(nodes);
-        BranchWorker branchWorker = new BranchWorker(branches);
-        branchNodes = branchWorker.toBranchNodeHashMap(nodeWorker);
-
-        GraphService graphBuilder = new GraphService(nodes, edges);
-        HashMap<Node,List<Edge>> graph = graphBuilder.createGraph();
-
-        AStar<Node> routeFinder = new AStar<>();
-        routeFinder.setTargetScorer(targetScorer);
-        routeFinder.setNextNodeTargetScorer(nextNodeScorer);
-        routeFinder.setGraph(graph);
-
-        HashMap<Node,Route<Node>> shortPathes = new HashMap<>();
-        try {
-            orders.forEach(order -> {
-                double datasetDistanceToInMetres = order.getDistanceTo() * 1000;
-                try {
-                    Node startNode = branchNodes.get(order.getBranchCode().toUpperCase());
-                    Node nodeTo = nodeWorker.getNodeByCoordinates(order.getLatitude(), order.getLongitude());
-                    Route<Node> pathToCurrentNode = routeFinder.getRoute(startNode,nodeTo);
-                    //difference between my result and dataset value
-                    double epsilon = pathToCurrentNode.getRouteScore() - datasetDistanceToInMetres;
-                    pathToCurrentNode.setEpsilon(epsilon);
-                    shortPathes.put(nodeTo, pathToCurrentNode);
+        Map<String,NodeDTO> branchNodes = branchService.toBranchNodeHashMap(branches);
+        HashMap<NodeDTO,Route<NodeDTO>> shortPaths = new HashMap<>();
+        orders.forEach(order -> {
+            LatLon latLon = geocodingService.geocode(order.getAddress());
+            NodeDTO nodeTo = null;
+            try {
+                NodeDTO startNode = branchNodes.get(order.getBranchCode().toUpperCase());
+                nodeTo = nodeService.getNodeByCoordinates(latLon.lat(), latLon.lon());
+                if(nodeTo == null){
+                    log.error("node To is null for lat,lon = {},{}",latLon.lat(), latLon.lon());
+                    return;
                 }
-                catch(InvalidNodeException ex)
-                {
-                    NodesToFileWriter.writeErrResultInFile(nodeNotExistFileName,ex.getLat(),ex.getLon());
-                }
-                catch(NoShortPathException ex)
-                {
-                    double errNodeLat = ex.getUnattainableNode().getLatitude();
-                    double errNodeLon = ex.getUnattainableNode().getLongitude();
-                    NodesToFileWriter.writeErrResultInFile(noShortPathFileName,errNodeLat,errNodeLon);
-                }
-            });
-        }
-        catch(WriteResultException ex)
-        {
-            ex.printStackTrace();
-        }
-        try {
-            NodesToJsonWriter.writePathToJson(fileNameJson, shortPathes);
-        }
-        catch(JsonProcessingException ex){
-            ex.printStackTrace();
-        }
-        return shortPathes;
+                Route<NodeDTO> pathToCurrentNode = routeFinder.getRoute(
+                        startNode,
+                        nodeTo,
+                        edgeScorer,
+                        targetScorer);
+                shortPaths.put(nodeTo, pathToCurrentNode);
+            }
+            catch(InvalidNodeException ex)
+            {
+                log.error("Exception occured while node processing",ex);
+            }
+            catch(NoShortPathException ex)
+            {
+                double errNodeLat = ex.getUnattainableNode().getLatitude();
+                double errNodeLon = ex.getUnattainableNode().getLongitude();
+                log.debug("Can't calculate route for node with coordinates {},{}. No Short Path.",errNodeLat,errNodeLon);
+                shortPaths.put(nodeTo,new Route<NodeDTO>());
+            }
+        });
+        return shortPaths;
     }
 }

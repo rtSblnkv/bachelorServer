@@ -1,11 +1,11 @@
 package com.diploma.logisticsService.service.routing.scorers.impl;
 
-import com.diploma.logisticsService.models.csv.Node;
+import com.diploma.logisticsService.models.dto.NodeDTO;
 import com.diploma.logisticsService.service.routing.scorers.TargetScorer;
 import org.springframework.stereotype.Component;
 
 @Component
-public class DistanceTargetScorer<T extends Node> implements TargetScorer<T> {
+public class DistanceTargetScorer<T extends NodeDTO> implements TargetScorer<T> {
     @Override
     public double computeCost(T from, T to) {
         double R = 6372.8; // Earth's Radius, in kilometers

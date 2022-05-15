@@ -13,8 +13,7 @@ import lombok.*;
 public class Order {
     private String orderType;
     private String branchCode;
-    private double latitude;
-    private double longitude;
+    private String address;
     private Boolean hasLoyality;
     private double deliveryFee;
     public String getBranchCode() {

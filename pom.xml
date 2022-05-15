@@ -15,6 +15,7 @@
 	<description>Bachelor diploma Project.RtSblnkv</description>
 	<properties>
 		<java.version>11</java.version>
+		<geocoding.version>2.0.0</geocoding.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -67,6 +68,25 @@
 			<artifactId>jmh-generator-annprocess</artifactId>
 			<version>1.28</version>
 		</dependency>
+
+		<dependency>
+			<groupId>io.redlink.geocoding</groupId>
+			<artifactId>geocoding-api</artifactId>
+			<version>${geocoding.version}</version>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/io.redlink.geocoding/geocoding-osm -->
+		<dependency>
+			<groupId>io.redlink.geocoding</groupId>
+			<artifactId>geocoding-osm</artifactId>
+			<version>${geocoding.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.redlink.geocoding</groupId>
+			<artifactId>geocoding-spring-boot-autoconfigure</artifactId>
+			<version>${geocoding.version}</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
