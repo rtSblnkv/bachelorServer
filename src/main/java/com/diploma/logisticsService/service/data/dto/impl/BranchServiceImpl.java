@@ -7,6 +7,7 @@ import com.diploma.logisticsService.service.data.dto.NodeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -30,5 +31,13 @@ public class BranchServiceImpl implements BranchService {
             branchNodes.put(branch.getBranchCode(),branchNode);
         });
         return branchNodes;
+    }
+
+    @Override
+    public NodeDTO getBranchNode(Branch branch){
+        HashMap<String, NodeDTO> branchNodes = toBranchNodeHashMap(
+                Collections.singletonList(branch)
+        );
+        return branchNodes.get(branch.getBranchCode());
     }
 }

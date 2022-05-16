@@ -1,21 +1,28 @@
 package com.diploma.logisticsService.service.routing.dijkstra;
 
-import TTL.exception_handlers.InvalidNodeException;
-import TTL.exception_handlers.NoShortPathException;
-import TTL.exception_handlers.WriteResultException;
-import TTL.models.*;
-import TTL.services.graphServices.GraphService;
-import TTL.services.graphServices.Scorers.NewNodeScorer;
-import TTL.services.listWorkers.BranchWorker;
-import TTL.services.listWorkers.NodeWorker;
-import TTL.services.writers.NodesToFileWriter;
-import TTL.services.writers.NodesToJsonWriter;
-import TTL.services.writers.Writer;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import lombok.NoArgsConstructor;
-import org.openjdk.jmh.annotations.*;
 
-import java.nio.file.FileAlreadyExistsException;
+import com.diploma.logisticsService.exceptions.InvalidNodeException;
+import com.diploma.logisticsService.exceptions.NoShortPathException;
+import com.diploma.logisticsService.models.csv.Branch;
+import com.diploma.logisticsService.models.csv.Order;
+import com.diploma.logisticsService.models.csv.Route;
+import com.diploma.logisticsService.models.dto.EdgeDTO;
+import com.diploma.logisticsService.models.dto.NodeDTO;
+import com.diploma.logisticsService.models.routing.RoutingParams;
+import com.diploma.logisticsService.service.data.dto.BranchService;
+import com.diploma.logisticsService.service.data.dto.EdgeService;
+import com.diploma.logisticsService.service.data.dto.NodeService;
+import com.diploma.logisticsService.service.geocoding.GeocodingService;
+import com.diploma.logisticsService.service.routing.scorers.NewNodeScorer;
+import com.diploma.logisticsService.service.routing.scorers.impl.EdgeDistanceScorer;
+import com.diploma.logisticsService.service.routing.scorers.impl.EdgeDistanceTrafficJamScorer;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import io.redlink.geocoding.LatLon;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.openjdk.jmh.annotations.*;
+import org.springframework.stereotype.Component;
+
 import java.util.HashMap;
 import java.util.List;
 
@@ -29,87 +36,48 @@ import java.util.List;
 @BenchmarkMode(Mode.All)
 @Warmup(iterations = 2)
 @State(Scope.Benchmark)
-@NoArgsConstructor
+@Component
+@RequiredArgsConstructor
+@Slf4j
 public class DijkstraRunner {
 
-    private  List<Node> nodes;
-    private  List<Edge> edges;
-    private  List<Branch> branches;
+    private final NodeService nodeService;
+    private final EdgeService edgeService;
+    private final GeocodingService geocodingService;
+    private final BranchService branchService;
+    private final Dijkstra dijkstra;
 
-    public DijkstraRunner( List<Node> nodes, List<Edge> edges, List<Branch> branches) {
-        this.nodes = nodes;
-        this.edges = edges;
-        this.branches = branches;
-    }
+    private NewNodeScorer<EdgeDTO> edgeScorer;
 
-    public HashMap<Node,Route<Node>> computePathesForLayer(
-            NewNodeScorer<Edge> scorer,
-            String branch,
+    public HashMap<NodeDTO, Route<NodeDTO>> computePathesForLayer(
+            Branch branch,
             List<Order> orders,
-            String type
+            RoutingParams params
     ) {
-        HashMap<Node,Route<Node>> shortPathes = new HashMap<>();
-
-        String noShortPathFileName = "results\\dijkstra\\"+branch +"_"+ type +"_no_short_path.txt";
-        String nodeNotExistFileName = "results\\dijkstra\\"+branch +"_"+ type +"_strange.txt";
-
-        String fileNameJson = "results\\dijkstra\\json\\"+branch +"_"+ type + "Dijkstra.json";
-
-        try{
-            Writer.createFile(noShortPathFileName);
-            Writer.createFile(nodeNotExistFileName);
+        HashMap<NodeDTO, Route<NodeDTO>> shortPaths = new HashMap<>();
+        if (params.isUseTrafficJamPoints()) {
+            edgeScorer = new EdgeDistanceTrafficJamScorer<>();
+        } else {
+            edgeScorer = new EdgeDistanceScorer<>();
         }
-        catch(FileAlreadyExistsException ex) {
-            System.out.println(ex.getMessage());
-        }
-
-        NodeWorker nodeWorker = new NodeWorker(nodes);
-        Node branchNode = getBranchNode(branch,nodeWorker);
-
-        GraphService graphBuilder = new GraphService(nodes,edges);
-        HashMap<Node,List<Edge>> graph = graphBuilder.createGraph();
-
-        Dijkstra dijkstra = new Dijkstra(graph);
-        dijkstra.computeMinDistancesfrom(branchNode,scorer);
-
-        try {
-            orders.forEach(order -> {
-                double datasetDistanceToInMetres = order.getDistanceTo() * 1000;//in metres
-                try {
-                    Node nodeTo = nodeWorker.getNodeByCoordinates(order.getLatitude(), order.getLongitude());
-                    Route<Node> pathToCurrentNode = dijkstra.getShortestPathTo(nodeTo);
-                    double epsilon = pathToCurrentNode.getRouteScore() - datasetDistanceToInMetres;//difference between my result and dataset value
-                    pathToCurrentNode.setEpsilon(epsilon);
-                    shortPathes.put(nodeTo, pathToCurrentNode);
-                }
-                catch(InvalidNodeException ex) {
-                    NodesToFileWriter.writeErrResultInFile(nodeNotExistFileName,ex.getLat(),ex.getLon());
-                }
-                catch(NoShortPathException ex) {
-                    double errNodeLat = ex.getUnattainableNode().getLatitude();
-                    double errNodeLon = ex.getUnattainableNode().getLongitude();
-                    NodesToFileWriter.writeErrResultInFile(noShortPathFileName, errNodeLat, errNodeLon);
-                }
-            });
-        }
-        catch(WriteResultException ex)
-        {
-            ex.printStackTrace();
-        }
-
-        try {
-            NodesToJsonWriter.writePathToJson(fileNameJson, shortPathes);
-        }
-        catch(JsonProcessingException ex){
-            ex.printStackTrace();
-        }
-
-        return shortPathes;
-    }
-
-    private Node getBranchNode(String branch, NodeWorker nw){
-        BranchWorker branchWorker = new BranchWorker(branches);
-        HashMap<String, Node> branchNodes = branchWorker.toBranchNodeHashMap(nw);
-        return branchNodes.get(branch);
+        NodeDTO branchNode = branchService.getBranchNode(branch);
+        dijkstra.computeMinDistancesfrom(branchNode, edgeScorer);
+        orders.forEach(order -> {
+            LatLon latLon = geocodingService.geocode(order.getAddress());
+            NodeDTO nodeTo = null;
+            try {
+                nodeTo = nodeService.getNodeByCoordinates(latLon.lat(), latLon.lon());
+                Route<NodeDTO> pathToCurrentNode = dijkstra.getShortestPathTo(nodeTo);
+                shortPaths.put(nodeTo, pathToCurrentNode);
+            } catch (InvalidNodeException ex) {
+                log.error("Exception occured while node processing", ex);
+            } catch (NoShortPathException ex) {
+                double errNodeLat = ex.getUnattainableNode().getLatitude();
+                double errNodeLon = ex.getUnattainableNode().getLongitude();
+                log.debug("Can't calculate route for node with coordinates {},{}. No Short Path.", errNodeLat, errNodeLon);
+                shortPaths.put(nodeTo, new Route<NodeDTO>());
+            }
+        });
+        return shortPaths;
     }
 }

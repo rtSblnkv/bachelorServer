@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface BranchService {
     HashMap<String, NodeDTO> toBranchNodeHashMap(List<Branch> branches);
+
+    NodeDTO getBranchNode(Branch branch);
 }
