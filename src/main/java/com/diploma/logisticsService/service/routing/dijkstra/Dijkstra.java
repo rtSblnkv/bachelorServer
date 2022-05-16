@@ -1,7 +1,19 @@
 package com.diploma.logisticsService.service.routing.dijkstra;
 
 
+import com.diploma.logisticsService.exceptions.NoShortPathException;
+import com.diploma.logisticsService.models.csv.Route;
+import com.diploma.logisticsService.models.dto.EdgeDTO;
+import com.diploma.logisticsService.models.dto.NodeDTO;
+import com.diploma.logisticsService.models.routing.DijkstraRouteNode;
+import com.diploma.logisticsService.service.graph.GraphService;
+import com.diploma.logisticsService.service.routing.a_star.RouteFinder;
+import com.diploma.logisticsService.service.routing.scorers.NewNodeScorer;
+import com.diploma.logisticsService.service.routing.scorers.TargetScorer;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,34 +26,27 @@ import java.util.concurrent.PriorityBlockingQueue;
  * graph - variable, which contains graph structure
  * methods : computeMinDistanceFrom , getShortestpathTo
  */
-@NoArgsConstructor
-public class Dijkstra implements RouteFinder<Node> {
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class Dijkstra implements RouteFinder<NodeDTO> {
 
-    private Map<Node,List<Edge>> graph;
-    private Map<Long,DijkstraRouteNode<Node>> allNodes = new HashMap<>();
-    private NewNodeScorer<Edge> nextNodeTargetScorer;
+    private final GraphService graphService;
 
-    public Dijkstra(Map<Node,List<Edge>> graph) {
-        this.graph = graph;
-        nextNodeTargetScorer = new EdgeDistanceScorer<>();
-    }
 
-    public Dijkstra(NewNodeScorer<Edge> nextNodeTargetScorer, Map<Node,List<Edge>> graph) {
-        this.graph = graph;
-        this.nextNodeTargetScorer = nextNodeTargetScorer;
-    }
+    private Map<Long, DijkstraRouteNode<NodeDTO>> allNodes = new HashMap<>();
 
     /**
      * compute minDistances and set previous Node,
      * from which the distance is the shortest, for each Node in Graph.
      * @param nodeFrom - Node from which min distances will be computed
      */
-    public void computeMinDistancesfrom(Node nodeFrom ,NewNodeScorer<Edge> nextNodeTargetScorer)
+    public void computeMinDistancesfrom(NodeDTO nodeFrom ,NewNodeScorer<EdgeDTO> nextNodeTargetScorer)
     {
         try{
-            DijkstraRouteNode<Node> dijkstraStartRouteNode = new DijkstraRouteNode<Node>(nodeFrom);
+            DijkstraRouteNode<NodeDTO> dijkstraStartRouteNode = new DijkstraRouteNode<Node>(nodeFrom);
             dijkstraStartRouteNode.setMinDistance(0);
-            PriorityBlockingQueue<DijkstraRouteNode<Node>> priorityQueue = new PriorityBlockingQueue<>();
+            PriorityBlockingQueue<DijkstraRouteNode<NodeDTO>> priorityQueue = new PriorityBlockingQueue<>();
             priorityQueue.add(dijkstraStartRouteNode);
             allNodes.put(nodeFrom.getId(),dijkstraStartRouteNode);
 
@@ -50,7 +55,7 @@ public class Dijkstra implements RouteFinder<Node> {
                 List<Edge> curNodeEdges = graph.get(curNode.getCurrentNode());
                 if(curNodeEdges != null) {
                     curNodeEdges.forEach(edge -> {
-                        if(nodeWithIdExist(edge.getTo())){
+                        if(graphService.nodeWithIdExist(edge.getTo())){
                             Node curNodeTo = getNodeById(edge.getTo());
                             DijkstraRouteNode<Node> nextNode = allNodes.getOrDefault(
                                     curNodeTo.getId(),
@@ -81,17 +86,17 @@ public class Dijkstra implements RouteFinder<Node> {
      * @param nodeTo - The final point to compute short path for
      * @return list of nodes, which contains the shortest path to nodeTo
      */
-    public Route<Node> getShortestPathTo(Node nodeTo) throws NoShortPathException
+    public Route<NodeDTO> getShortestPathTo(NodeDTO nodeTo) throws NoShortPathException
     {
-        List<Node> path = new ArrayList<>();
+        List<NodeDTO> path = new ArrayList<>();
         if(routeNodeForNodeExist(nodeTo.getId())){
-            DijkstraRouteNode<Node> routeNode = findRouteNodeForNode(nodeTo.getId());
+            DijkstraRouteNode<NodeDTO> routeNode = findRouteNodeForNode(nodeTo.getId());
             double distance = routeNode.getMinDistance();
             for(;; routeNode = findRouteNodeForNode(routeNode.getPreviousNode().getId())){
                 path.add(0,routeNode.getCurrentNode());
                 if(routeNode.getPreviousNode() == null) break;
             }
-            Route<Node> route = new Route<Node>();
+            Route<NodeDTO> route = new Route<>();
             route.setRoute(path);
             route.setRouteScore(distance);
             return route;
@@ -104,28 +109,15 @@ public class Dijkstra implements RouteFinder<Node> {
        return allNodes.keySet().parallelStream().anyMatch(key -> key == nodeToId);
     }
 
-    public DijkstraRouteNode<Node> findRouteNodeForNode(long nodeToId){
+    public DijkstraRouteNode<NodeDTO> findRouteNodeForNode(long nodeToId){
         return allNodes.get(nodeToId);
     }
 
-    public Route<Node> getRoute(Node nodeFrom, Node nodeTo, NewNodeScorer<Edge> nextNodeTargetScorer){
-        computeMinDistancesfrom(nodeFrom, nextNodeTargetScorer);
-        return getShortestPathTo(nodeTo);
-    }
-
-    public boolean nodeWithIdExist(long id) {
-        return graph.keySet()
-                .parallelStream()
-                .anyMatch(node -> node.getId() == id);
-    }
-
     @Override
-    public Node getNodeById(long id) {
-        return graph.keySet().parallelStream().filter(node -> node.getId() == id).findAny().get();
-    }
-
-
-    public Route<Node> getRoute(Node nodeFrom, Node nodeTo){
+    public Route<NodeDTO> getRoute(NodeDTO nodeFrom,
+                                   NodeDTO nodeTo,
+                                   NewNodeScorer<EdgeDTO> nextNodeTargetScorer,
+                                   TargetScorer<NodeDTO> targetScorer){
         computeMinDistancesfrom(nodeFrom, nextNodeTargetScorer);
         return getShortestPathTo(nodeTo);
     }

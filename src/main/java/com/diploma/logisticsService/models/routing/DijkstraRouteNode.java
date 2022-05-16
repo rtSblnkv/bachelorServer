@@ -1,6 +1,7 @@
 package com.diploma.logisticsService.models.routing;
 
 import com.diploma.logisticsService.models.csv.Node;
+import com.diploma.logisticsService.models.dto.NodeDTO;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,7 +9,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @EqualsAndHashCode
-public class DijkstraRouteNode<T extends Node> implements Comparable<DijkstraRouteNode<T>> {
+public class DijkstraRouteNode<T extends NodeDTO> implements Comparable<DijkstraRouteNode<T>> {
 
     private final T currentNode;
 
