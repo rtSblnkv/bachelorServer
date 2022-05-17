@@ -40,4 +40,13 @@ public class BranchServiceImpl implements BranchService {
         );
         return branchNodes.get(branch.getBranchCode());
     }
+
+    @Override
+    public Branch getByBranchCode(List<Branch> branches, String branchCode){
+        return branches
+                .stream()
+                .filter(branch -> branch.getBranchCode().equals(branchCode))
+                .findFirst()
+                .orElse(null);
+    }
 }

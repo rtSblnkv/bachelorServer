@@ -11,14 +11,13 @@ public class RoutingParams {
     private Double commonDistance;
     private boolean needsGeneralization;
     private boolean useTrafficJamPoints;
-
-    private int streetType;
+    private int vehicleType;
 
     public String toString() {
         return new StringJoiner("[", ",", "]")
                 .add("commonDistance: " + this.commonDistance)
                 .add("needsGeneralization: " + this.needsGeneralization)
-                .add("streetType: " + this.streetType)
+                .add("streetType: " + this.vehicleType)
                 .add("useTrafficJamPoints: " + this.useTrafficJamPoints)
                 .toString();
     }

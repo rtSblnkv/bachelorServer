@@ -4,14 +4,12 @@ package com.diploma.logisticsService.service.routing.a_star;
 import com.diploma.logisticsService.exceptions.InvalidNodeException;
 import com.diploma.logisticsService.exceptions.NoShortPathException;
 import com.diploma.logisticsService.models.csv.Branch;
-import com.diploma.logisticsService.models.csv.Node;
 import com.diploma.logisticsService.models.csv.Order;
 import com.diploma.logisticsService.models.csv.Route;
 import com.diploma.logisticsService.models.dto.EdgeDTO;
 import com.diploma.logisticsService.models.dto.NodeDTO;
 import com.diploma.logisticsService.models.routing.RoutingParams;
 import com.diploma.logisticsService.service.data.dto.BranchService;
-import com.diploma.logisticsService.service.data.dto.EdgeService;
 import com.diploma.logisticsService.service.data.dto.NodeService;
 import com.diploma.logisticsService.service.geocoding.GeocodingService;
 import com.diploma.logisticsService.service.routing.scorers.NewNodeScorer;
@@ -19,13 +17,11 @@ import com.diploma.logisticsService.service.routing.scorers.TargetScorer;
 import com.diploma.logisticsService.service.routing.scorers.impl.DistanceTargetScorer;
 import com.diploma.logisticsService.service.routing.scorers.impl.EdgeDistanceScorer;
 import com.diploma.logisticsService.service.routing.scorers.impl.EdgeDistanceTrafficJamScorer;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.redlink.geocoding.LatLon;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openjdk.jmh.annotations.*;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +38,7 @@ import java.util.Map;
 @State(Scope.Benchmark)
 @RequiredArgsConstructor
 @Slf4j
-public class RouteFinderRunner {
+public class AStarRunner {
 
     private final NodeService nodeService;
     private final BranchService branchService;
@@ -87,7 +83,8 @@ public class RouteFinderRunner {
                         startNode,
                         nodeTo,
                         edgeScorer,
-                        targetScorer);
+                        targetScorer,
+                        params);
                 shortPaths.put(nodeTo, pathToCurrentNode);
             }
             catch(InvalidNodeException ex)

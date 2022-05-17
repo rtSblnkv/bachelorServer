@@ -12,4 +12,6 @@ public interface GraphService {
     boolean nodeWithIdExist(long id);
 
     NodeDTO getNodeById(long id);
+
+    List<EdgeDTO> get(NodeDTO node);
 }

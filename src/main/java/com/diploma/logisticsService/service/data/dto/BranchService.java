@@ -10,4 +10,6 @@ public interface BranchService {
     HashMap<String, NodeDTO> toBranchNodeHashMap(List<Branch> branches);
 
     NodeDTO getBranchNode(Branch branch);
+
+    Branch getByBranchCode(List<Branch> branches, String branchCode);
 }

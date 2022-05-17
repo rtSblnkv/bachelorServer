@@ -16,7 +16,6 @@ import com.diploma.logisticsService.service.geocoding.GeocodingService;
 import com.diploma.logisticsService.service.routing.scorers.NewNodeScorer;
 import com.diploma.logisticsService.service.routing.scorers.impl.EdgeDistanceScorer;
 import com.diploma.logisticsService.service.routing.scorers.impl.EdgeDistanceTrafficJamScorer;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.redlink.geocoding.LatLon;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,12 +41,9 @@ import java.util.List;
 public class DijkstraRunner {
 
     private final NodeService nodeService;
-    private final EdgeService edgeService;
     private final GeocodingService geocodingService;
     private final BranchService branchService;
     private final Dijkstra dijkstra;
-
-    private NewNodeScorer<EdgeDTO> edgeScorer;
 
     public HashMap<NodeDTO, Route<NodeDTO>> computePathesForLayer(
             Branch branch,
@@ -55,13 +51,14 @@ public class DijkstraRunner {
             RoutingParams params
     ) {
         HashMap<NodeDTO, Route<NodeDTO>> shortPaths = new HashMap<>();
+        NewNodeScorer<EdgeDTO> edgeScorer = null;
         if (params.isUseTrafficJamPoints()) {
             edgeScorer = new EdgeDistanceTrafficJamScorer<>();
         } else {
             edgeScorer = new EdgeDistanceScorer<>();
         }
         NodeDTO branchNode = branchService.getBranchNode(branch);
-        dijkstra.computeMinDistancesfrom(branchNode, edgeScorer);
+        dijkstra.computeMinDistancesFrom(branchNode, edgeScorer,params);
         orders.forEach(order -> {
             LatLon latLon = geocodingService.geocode(order.getAddress());
             NodeDTO nodeTo = null;

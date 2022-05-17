@@ -1,7 +1,6 @@
 package com.diploma.logisticsService.service.graph;
 
 
-import com.diploma.logisticsService.models.csv.Node;
 import com.diploma.logisticsService.models.dto.EdgeDTO;
 import com.diploma.logisticsService.models.dto.NodeDTO;
 import com.diploma.logisticsService.service.data.dto.EdgeService;
@@ -68,6 +67,7 @@ public class GraphServiceImpl implements GraphService {
                 .get();
     }
 
+    @Override
     public List<EdgeDTO> get(NodeDTO node){
         if(graph == null) createGraph();
         return graph.get(node);
