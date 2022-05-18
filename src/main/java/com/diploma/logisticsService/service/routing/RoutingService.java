@@ -61,7 +61,7 @@ public class RoutingService {
                 .entrySet()
                 .parallelStream()
                 .map(branchOrders -> aStarRunner.computePathes(
-                        orders,
+                        branchOrders.getValue(),
                         branches,
                         params))
                 .reduce(this::merge)
@@ -86,7 +86,7 @@ public class RoutingService {
                 .entrySet()
                 .parallelStream()
                 .map(branchOrders -> aStarRunner.computePathes(
-                        orders,
+                        branchOrders.getValue(),
                         branches,
                         params))
                 .reduce(this::merge)
@@ -99,25 +99,24 @@ public class RoutingService {
      *
      * @return Map(Node, lists, which contains shortest path to the Node from restaurant)
      */
-    // @Benchmark
+    @Benchmark
     public HashMap<NodeDTO, Route<NodeDTO>> getShortestForOrdersByBranchCodeParallelPreliminary(
             List<Order> orders,
             List<Branch> branches,
             RoutingParams params
     ) {
         ByBranchCodeLayers byBranchCodeLayers = new ByBranchCodeLayers(orders);
-        System.out.println("Branch Code Linear by Layer");
+        log.debug("Branch Code Parallel Dijkstra orders {}, branches {}, params {}", orders, branches, params);
         return byBranchCodeLayers.getLayers()
                 .entrySet()
                 .parallelStream()
                 .map(branchOrders -> {
-                    Branch branch = branchService.getByBranchCode(branches,branchOrders.getKey());
+                    Branch branch = branchService.getByBranchCode(branches, branchOrders.getKey());
                     return dijkstraRunner.computePathesForLayer(
-                        branch,
-                        branchOrders.getValue(),
-                        params);
-                }
-                )
+                            branch,
+                            branchOrders.getValue(),
+                            params);
+                })
                 .reduce(this::merge)
                 .orElse(new HashMap<>());
     }
