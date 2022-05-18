@@ -34,5 +34,5 @@ public class EdgeDTO {
     private int trafficJamPoint;
 
     @Column(name = "IS_AVAILABLE")
-    private boolean isAvailable;
+    private boolean isAvailable = true;
 }
