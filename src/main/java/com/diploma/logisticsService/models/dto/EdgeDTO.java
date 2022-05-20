@@ -2,7 +2,6 @@ package com.diploma.logisticsService.models.dto;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.Cascade;
 
 import javax.persistence.*;
 
@@ -13,15 +12,14 @@ import javax.persistence.*;
 public class EdgeDTO {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private long id;
 
-    @OneToOne(mappedBy = "edge")
-    @Cascade(value = org.hibernate.annotations.CascadeType.ALL)
+    @ManyToOne
+    @JoinColumn(name = "FROM_NODE", referencedColumnName = "id")
     private NodeDTO from;
 
-    @OneToOne(mappedBy = "edge")
-    @Cascade(value = org.hibernate.annotations.CascadeType.ALL)
+    @ManyToOne
+    @JoinColumn
     private NodeDTO to;
 
     @Column(name = "DISTANCE", columnDefinition = "float")

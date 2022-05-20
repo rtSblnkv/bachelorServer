@@ -20,6 +20,7 @@ public class CsvToDTOConverter {
     private final CsvDataService csvDataService;
 
     public void csvToDb(){
+        csvDataService.uploadDataFromCsvFiles();
         List<Node> nodes = csvDataService.getNodes();
         List<Edge> edges = csvDataService.getEdges();
         nodeService.saveAll(nodes);
