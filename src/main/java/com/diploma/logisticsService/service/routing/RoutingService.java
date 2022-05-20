@@ -34,7 +34,7 @@ public class RoutingService {
      *
      * @return Map(Node, lists, which contains shortest path to the Node from restaurant)
      */
-    @Benchmark
+    //@Benchmark
     public HashMap<NodeDTO, Route<NodeDTO>> getShortestForAllOrders(
             List<Order> orders,
             List<Branch> branches,
@@ -49,7 +49,7 @@ public class RoutingService {
      *
      * @return Map(Node, lists, which contains shortest path to the Node from restaurant)
      */
-    @Benchmark
+    //@Benchmark
     public HashMap<NodeDTO, Route<NodeDTO>> getShortestForAllOrdersByOrderTypeParallel(
             List<Order> orders,
             List<Branch> branches,
@@ -74,7 +74,7 @@ public class RoutingService {
      *
      * @return Map(Node, lists, which contains shortest path to the Node from restaurant)
      */
-    @Benchmark
+    //@Benchmark
     public HashMap<NodeDTO, Route<NodeDTO>> getShortestForAllOrdersByBranchCodeParallel(
             List<Order> orders,
             List<Branch> branches,
@@ -99,7 +99,7 @@ public class RoutingService {
      *
      * @return Map(Node, lists, which contains shortest path to the Node from restaurant)
      */
-    @Benchmark
+    //@Benchmark
     public HashMap<NodeDTO, Route<NodeDTO>> getShortestForOrdersByBranchCodeParallelPreliminary(
             List<Order> orders,
             List<Branch> branches,

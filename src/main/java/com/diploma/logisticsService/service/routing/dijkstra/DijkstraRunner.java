@@ -32,9 +32,6 @@ import java.util.List;
  * 2. Calculating dijkstra for branch codes location
  * for splitting by bracnh codes order sublists
  */
-@BenchmarkMode(Mode.All)
-@Warmup(iterations = 2)
-@State(Scope.Benchmark)
 @Component
 @RequiredArgsConstructor
 @Slf4j

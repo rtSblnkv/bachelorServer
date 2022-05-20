@@ -14,8 +14,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 
-@RequiredArgsConstructor
 @Component
+@RequiredArgsConstructor
 public class AStar<T extends NodeDTO> implements RouteFinder<T> {
     private final GraphService graphService;
 

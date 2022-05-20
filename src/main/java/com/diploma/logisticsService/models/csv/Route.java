@@ -8,7 +8,6 @@ import java.util.List;
 @Getter
 @Setter
 @RequiredArgsConstructor
-@NoArgsConstructor
 public class Route<T extends NodeDTO> {
 
     private double routeScore;

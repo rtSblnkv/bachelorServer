@@ -20,7 +20,7 @@ import com.diploma.logisticsService.service.routing.scorers.impl.EdgeDistanceTra
 import io.redlink.geocoding.LatLon;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.openjdk.jmh.annotations.*;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.List;
@@ -33,9 +33,7 @@ import java.util.Map;
  * 2. Calculating dijkstra for branch codes location
  * for splitting by bracnh codes order sublists
  */
-@BenchmarkMode(Mode.All)
-@Warmup(iterations = 2)
-@State(Scope.Benchmark)
+@Component
 @RequiredArgsConstructor
 @Slf4j
 public class AStarRunner {
