@@ -9,10 +9,7 @@ import com.diploma.logisticsService.service.data.dto.NodeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -20,9 +17,12 @@ import java.util.stream.StreamSupport;
 @RequiredArgsConstructor
 public class EdgeServiceImpl implements EdgeService {
 
+    private static long id = 0L;
+
     private final EdgeRepository edgeRepository;
     private final NodeService nodeService;
 
+    @Override
     public List<EdgeDTO> getAll(){
         Iterable<EdgeDTO> edges = edgeRepository.findAll();
         return StreamSupport
@@ -49,6 +49,7 @@ public class EdgeServiceImpl implements EdgeService {
         List<EdgeDTO> edgesDTO = edges
                 .stream()
                 .map(this::toDto)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
         setTrafficJamPoints(edgesDTO);
         edgeRepository.saveAll(edgesDTO);
@@ -65,10 +66,14 @@ public class EdgeServiceImpl implements EdgeService {
     @Override
     public EdgeDTO toDto(Edge edge) {
         EdgeDTO edgeDTO = new EdgeDTO();
+        edgeDTO.setId(id);
+        id++;
         edgeDTO.setDistance(edge.getDistance());
         edgeDTO.setStreetType(edge.getStreetType());
         NodeDTO from = nodeService.getNodeById(edge.getFrom());
+        if(from == null) return null;
         NodeDTO to = nodeService.getNodeById(edge.getTo());
+        if(to == null) return null;
         edgeDTO.setFrom(from);
         edgeDTO.setTo(to);
         return edgeDTO;

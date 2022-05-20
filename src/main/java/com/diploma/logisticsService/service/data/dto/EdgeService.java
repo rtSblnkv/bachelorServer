@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.List;
 
 public interface EdgeService {
+    List<EdgeDTO> getAll();
+
     HashMap<Long, List<EdgeDTO>> toHashMap();
 
     void saveAll(List<Edge> edges);
