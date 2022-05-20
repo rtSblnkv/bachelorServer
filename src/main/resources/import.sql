@@ -1,0 +1,1 @@
+SELECT 'CREATE DATABASE myNewDB' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'logistics')\gexec
