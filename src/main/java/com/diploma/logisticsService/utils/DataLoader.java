@@ -23,7 +23,7 @@ public class DataLoader implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         if(!isInitializing.equals("none")){
             converter.csvToDb();
-            graphService.getGraph();
         }
+        graphService.getGraph();
     }
 }
